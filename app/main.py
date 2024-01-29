@@ -39,7 +39,7 @@ def load_questions_from_sheet(sheet_path):
     return questions_with_options
 
 # Load the questions and options when the app starts
-questions_with_options = load_questions_from_sheet("path_to_your_workbook.xlsx")
+questions_with_options = load_questions_from_sheet("data/vragenlijst.xlsx")
 
 @app.post("/question/")
 async def question(request: Request):
