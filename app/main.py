@@ -31,16 +31,17 @@ def load_questions_from_sheet(sheet_path):
     questions_with_options = []
     workbook = load_workbook(sheet_path)
     sheet = workbook.active
-    for row in sheet.iter_rows(min_row=2, values_only=True):
-        question = row[2]
-        quick_reply_options = row[3].split(',') if row[3] else []
+    for row in sheet.iter_rows(min_row=3, values_only=True):
+        question = row[1]  # Adjusted to the second column (index 1)
+        # Check if the quick reply options exist and are not None, then split, else empty list
+        quick_reply_options = row[2].split(',') if row[2] else []
         if question:
             questions_with_options.append((question, quick_reply_options))
     return questions_with_options
 
 # Load the questions and options when the app starts
 questions_with_options = load_questions_from_sheet("data/vragenlijst.xlsx")
-print(questions_with_options)
+print(questions_with_options[0])
 @app.post("/question/")
 async def question(request: Request):
     data = await request.json()
