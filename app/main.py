@@ -1,5 +1,6 @@
 import os
 from fastapi import FastAPI, HTTPException, Request
+from fastapi.middleware.cors import CORSMiddleware  # Import CORSMiddleware
 from orquesta_sdk import Orquesta, OrquestaClientOptions
 from openpyxl import load_workbook
 from dotenv import load_dotenv
@@ -8,6 +9,15 @@ load_dotenv()
 
 # Initialize FastAPI app
 app = FastAPI()
+
+# Set up CORS middleware
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  # Allows all origins
+    allow_credentials=True,
+    allow_methods=["*"],  # Allows all methods
+    allow_headers=["*"],  # Allows all headers
+)
 
 # Initialize Orquesta client
 def init_orquesta_client():
