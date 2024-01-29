@@ -27,20 +27,20 @@ def init_orquesta_client():
 
 client = init_orquesta_client()
 
-# Load questions from sheet
 def load_questions_from_sheet(sheet_path):
-    questions = []
+    questions_with_options = []
     workbook = load_workbook(sheet_path)
     sheet = workbook.active
     for row in sheet.iter_rows(min_row=2, values_only=True):
         question = row[2]
+        quick_reply_options = row[3].split(',') if row[3] else []
         if question:
-            questions.append(question)
-    return questions
+            questions_with_options.append((question, quick_reply_options))
+    return questions_with_options
 
-questions = load_questions_from_sheet('data/vragenlijst.xlsx')
+# Load the questions and options when the app starts
+questions_with_options = load_questions_from_sheet("path_to_your_workbook.xlsx")
 
-# POST endpoint to process a question
 @app.post("/question/")
 async def question(request: Request):
     data = await request.json()
@@ -48,10 +48,10 @@ async def question(request: Request):
     previous_question = data.get("previous_question")
     previous_answer = data.get("previous_answer")
 
-    if question_index is None or question_index < 1 or question_index > len(questions):
+    if question_index is None or question_index < 1 or question_index > len(questions_with_options):
         raise HTTPException(status_code=400, detail="Invalid question index")
 
-    question = questions[question_index - 1]
+    question, quick_reply_options = questions_with_options[question_index - 1]
 
     previous_context = ""
     if previous_question and previous_answer:
@@ -70,7 +70,7 @@ async def question(request: Request):
     )
     rephrased_question = deployment.choices[0].message.content
 
-    return {"rephrased_question": rephrased_question}
+    return {"rephrased_question": rephrased_question, "quick_reply_options": quick_reply_options}
 
 if __name__ == "__main__":
     import uvicorn
