@@ -32,15 +32,14 @@ def load_questions_from_sheet(sheet_path):
     workbook = load_workbook(sheet_path)
     sheet = workbook.active
     for row in sheet.iter_rows(min_row=3, values_only=True):
-        question = row[1]  # Adjusted to the second column (index 1)
-        # Check if the quick reply options exist and are not None, then split, else empty list
+        question_index = row[0]  # Question index including subletters
+        question = row[1]
         quick_reply_options = row[2].split(',') if row[2] else []
+        condition = row[3] if len(row) > 3 else None
         if question:
-            questions_with_options.append((question, quick_reply_options))
+            questions_with_options.append((question_index, question, quick_reply_options, condition))
     return questions_with_options
 
-# Load the questions and options when the app starts
-questions_with_options = load_questions_from_sheet("data/vragenlijst.xlsx")
 @app.post("/question/")
 async def question(request: Request):
     data = await request.json()
@@ -48,10 +47,20 @@ async def question(request: Request):
     previous_question = data.get("previous_question")
     previous_answer = data.get("previous_answer")
 
-    if question_index is None or question_index < 1 or question_index > len(questions_with_options):
+    if question_index is None or question_index < 1:
         raise HTTPException(status_code=400, detail="Invalid question index")
 
-    question, quick_reply_options = questions_with_options[question_index - 1]
+    while question_index <= len(questions_with_options):
+        q_index, question, quick_reply_options, condition = questions_with_options[question_index - 1]
+
+        if condition:
+            if not is_condition_met(condition, previous_answer, quick_reply_options):
+                question_index += 1
+                continue
+        break
+
+    if question_index > len(questions_with_options):
+        raise HTTPException(status_code=400, detail="No suitable question found")
 
     previous_context = ""
     if previous_question and previous_answer:
@@ -71,6 +80,17 @@ async def question(request: Request):
     rephrased_question = deployment.choices[0].message.content
 
     return {"rephrased_question": rephrased_question, "quick_reply_options": quick_reply_options}
+
+def is_condition_met(condition, previous_answer, quick_reply_options):
+    # Logic to check if the condition for a subquestion is met
+    # Assuming condition format is "7a" and it's triggered if the first option of question 7 is chosen
+    main_question_index = int(condition[:-1]) - 1
+    if main_question_index < 0 or main_question_index >= len(questions_with_options):
+        return False
+
+    _, _, options, _ = questions_with_options[main_question_index]
+    return options and previous_answer == options[0]
+
 
 if __name__ == "__main__":
     import uvicorn
