@@ -40,6 +40,8 @@ def load_questions_from_sheet(sheet_path):
             questions_with_options.append((question_index, question, quick_reply_options, condition))
     return questions_with_options
 
+# Load the questions and options when the app starts
+questions_with_options = load_questions_from_sheet("data/vragenlijst.xlsx")
 @app.post("/question/")
 async def question(request: Request):
     data = await request.json()
