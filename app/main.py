@@ -1,6 +1,7 @@
 import os
 from fastapi import FastAPI, HTTPException, Request
-from fastapi.middleware.cors import CORSMiddleware  # Import CORSMiddleware
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 from orquesta_sdk import Orquesta, OrquestaClientOptions
 from openpyxl import load_workbook
 from dotenv import load_dotenv
@@ -27,6 +28,25 @@ def init_orquesta_client():
 
 client = init_orquesta_client()
 
+initial_questions_with_options = [
+    # Question 1
+    ("1", "Fijn dat u zich heeft aangemeld bij Logopédica. Heeft de aanmelding betrekking op uzelf of op iemand anders, bijvoorbeeld uw kind of een van uw ouders?", ["zelf", "ander"], None),
+    # Question 2: Conditional based on answer to question 1
+    ("2", "Wat is uw relatie tot die ander?", ["ouder/verzorger", "echtgeno(o)t(e)/partner", "(schoon)zoon/(schoon)dochter", "mantelzorger/verzorger/familielid"], "1=ander"),
+    # Question 3
+    ("3", "Heeft u voldoende tijd (maximaal 10 minuten) om een aantal vragen over uw klacht te beantwoorden?", ["ja", "nee"], None),
+    # Question 4
+    ("4", "Op welk van de volgende gebieden heeft uw klacht betrekking? (er zijn meerdere antwoorden mogelijk)", ["stem", "keel", "spraak", "niet vloeiend spreken", "taal", "slikken", "adem", "gehoor", "mondgewoonten", "neurologisch probleem", "oncologisch probleem", "psychisch/psychiatrisch probleem", "leer-/ontwikkelingsprobleem", "anders"], None),
+    # Question 5: Conditional based on answers to question 4
+    ("5", "Is er door uw huisarts of specialist een diagnose gesteld?", ["ja", "nee"], "4=neurologisch probleem,oncologisch probleem,psychisch/psychiatrisch probleem,leer-/ontwikkelingsprobleem,anders"),
+    # Question 6: Conditional based on answer to question 5 being "ja"
+    ("6", "Hoe luidde die diagnose?", [], "5=ja")
+]
+
+# Function to load initial questions
+def load_initial_questions():
+    return initial_questions_with_options
+
 def load_questions_from_sheet(sheet_path):
     questions_with_options = []
     workbook = load_workbook(sheet_path)
@@ -40,6 +60,9 @@ def load_questions_from_sheet(sheet_path):
             questions_with_options.append((question_index, question, quick_reply_options, condition))
     return questions_with_options
 
+all_questions_with_options = load_initial_questions() + load_questions_from_sheet("data/vragenlijst.xlsx")
+
+
 # Load the questions and options when the app starts
 questions_with_options = load_questions_from_sheet("data/vragenlijst.xlsx")
 @app.post("/question/")
@@ -49,25 +72,29 @@ async def question(request: Request):
     previous_question = data.get("previous_question")
     previous_answer = data.get("previous_answer")
 
+    # Combine initial questions with main questions for seamless transition
+    combined_questions_with_options = all_questions_with_options
+
     if question_index is None or question_index < 1:
         raise HTTPException(status_code=400, detail="Invalid question index")
 
-    while question_index <= len(questions_with_options):
-        q_index, question, quick_reply_options, condition = questions_with_options[question_index - 1]
+    while question_index <= len(combined_questions_with_options):
+        q_index, question, quick_reply_options, condition = combined_questions_with_options[question_index - 1]
 
-        if condition:
-            if not is_condition_met(condition, previous_answer, quick_reply_options):
-                question_index += 1
-                continue
+        if condition and not is_condition_met(condition, previous_answer, combined_questions_with_options):
+            question_index += 1
+            continue
         break
 
-    if question_index > len(questions_with_options):
+    if question_index > len(combined_questions_with_options):
         raise HTTPException(status_code=400, detail="No suitable question found")
 
+    # Assuming previous context logic remains the same
     previous_context = ""
     if previous_question and previous_answer:
         previous_context = f"Vraag: {previous_question}\nAntwoord: {previous_answer}"
 
+    # Assuming deployment logic remains the same
     deployment = client.deployments.invoke(
         key="logopedica-vragenlijsten",
         context={
@@ -83,16 +110,21 @@ async def question(request: Request):
 
     return {"rephrased_question": rephrased_question, "quick_reply_options": quick_reply_options}
 
-def is_condition_met(condition, previous_answer, quick_reply_options):
-    # Logic to check if the condition for a subquestion is met
-    # Assuming condition format is "7a" and it's triggered if the first option of question 7 is chosen
-    main_question_index = int(condition[:-1]) - 1
-    if main_question_index < 0 or main_question_index >= len(questions_with_options):
+
+def is_condition_met(condition, previous_answer, combined_questions_with_options):
+    # Updated logic to handle combined initial and main questions
+    condition_parts = condition.split('=')
+    if len(condition_parts) != 2:
+        return False  # Invalid condition format
+
+    condition_question_index, condition_answer = condition_parts
+    condition_question_index = int(condition_question_index) - 1  # Adjust for zero-based indexing
+
+    if condition_question_index < 0 or condition_question_index >= len(combined_questions_with_options):
         return False
 
-    _, _, options, _ = questions_with_options[main_question_index]
-    return options and previous_answer == options[0]
-
+    _, _, options, _ = combined_questions_with_options[condition_question_index]
+    return condition_answer in options and previous_answer in options
 
 if __name__ == "__main__":
     import uvicorn
