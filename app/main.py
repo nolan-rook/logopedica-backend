@@ -108,21 +108,12 @@ async def question(request: Request):
 
     return {"rephrased_question": rephrased_question, "quick_reply_options": quick_reply_options}
 
-
 def is_condition_met(condition, previous_answer, combined_questions_with_options):
-    # Updated logic to handle combined initial and main questions
-    condition_parts = condition.split('=')
-    if len(condition_parts) != 2:
-        return False  # Invalid condition format
-
-    condition_question_index, condition_answer = condition_parts
-    condition_question_index = int(condition_question_index) - 1  # Adjust for zero-based indexing
-
-    if condition_question_index < 0 or condition_question_index >= len(combined_questions_with_options):
-        return False
-
-    _, _, options, _ = combined_questions_with_options[condition_question_index]
-    return condition_answer in options and previous_answer in options
+    condition_question_index, valid_answers = condition.split('=')
+    # Split the valid answers by comma to support multiple valid answers
+    valid_answers_list = valid_answers.split(',')
+    # No need to adjust for zero-based indexing if your question indices already start at 1
+    return previous_answer in valid_answers_list
 
 if __name__ == "__main__":
     import uvicorn
