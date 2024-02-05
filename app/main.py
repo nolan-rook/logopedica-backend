@@ -29,16 +29,16 @@ def init_orquesta_client():
 client = init_orquesta_client()
 
 initial_questions_with_options = [
-    # Question 2: Conditional based on answer to question 1
-    ("2", "Wat is uw relatie tot die ander?", ["ouder/verzorger", "echtgeno(o)t(e)/partner", "(schoon)zoon/(schoon)dochter", "mantelzorger/verzorger/familielid"], "1=ander"),
+    # Question 1: Conditional based on answer to question in the static front-end
+    ("1", "Wat is uw relatie tot die ander?", ["ouder/verzorger", "echtgeno(o)t(e)/partner", "(schoon)zoon/(schoon)dochter", "mantelzorger/verzorger/familielid"], "1=ander"),
+    # Question 2
+    ("2", "Heeft u voldoende tijd (maximaal 10 minuten) om een aantal vragen over uw klacht te beantwoorden?", ["ja", "nee"], None),
     # Question 3
-    ("3", "Heeft u voldoende tijd (maximaal 10 minuten) om een aantal vragen over uw klacht te beantwoorden?", ["ja", "nee"], None),
-    # Question 4
-    ("4", "Op welk van de volgende gebieden heeft uw klacht betrekking? (er zijn meerdere antwoorden mogelijk)", ["stem", "keel", "spraak", "niet vloeiend spreken", "taal", "slikken", "adem", "gehoor", "mondgewoonten", "neurologisch probleem", "oncologisch probleem", "psychisch/psychiatrisch probleem", "leer-/ontwikkelingsprobleem", "anders"], None),
-    # Question 5: Conditional based on answers to question 4
-    ("5", "Is er door uw huisarts of specialist een diagnose gesteld?", ["ja", "nee"], "4=neurologisch probleem,oncologisch probleem,psychisch/psychiatrisch probleem,leer-/ontwikkelingsprobleem,anders"),
-    # Question 6: Conditional based on answer to question 5 being "ja"
-    ("6", "Hoe luidde die diagnose?", [], "5=ja")
+    ("3", "Op welk van de volgende gebieden heeft uw klacht betrekking? (er zijn meerdere antwoorden mogelijk)", ["stem", "keel", "spraak", "niet vloeiend spreken", "taal", "slikken", "adem", "gehoor", "mondgewoonten", "neurologisch probleem", "oncologisch probleem", "psychisch/psychiatrisch probleem", "leer-/ontwikkelingsprobleem", "anders"], None),
+    # Question 4: Conditional based on answers to question 4
+    ("4", "Is er door uw huisarts of specialist een diagnose gesteld?", ["ja", "nee"], "4=neurologisch probleem,oncologisch probleem,psychisch/psychiatrisch probleem,leer-/ontwikkelingsprobleem,anders"),
+    # Question 5: Conditional based on answer to question 5 being "ja"
+    ("5", "Hoe luidde die diagnose?", [], "5=ja")
 ]
 
 # Function to load initial questions
@@ -70,41 +70,54 @@ async def question(request: Request):
     previous_question = data.get("previous_question")
     previous_answer = data.get("previous_answer")
 
+    # Log the incoming request data
+    print(f"Received question_index={question_index}, previous_answer='{previous_answer}'")
+
     # Combine initial questions with main questions for seamless transition
     combined_questions_with_options = all_questions_with_options
 
     if question_index is None or question_index < 1:
         raise HTTPException(status_code=400, detail="Invalid question index")
 
+    # Log the start of the condition checking loop
+    print(f"Starting condition checking loop for question_index={question_index}")
+
     while question_index <= len(combined_questions_with_options):
         q_index, question, quick_reply_options, condition = combined_questions_with_options[question_index - 1]
 
-        if condition and not is_condition_met(condition, previous_answer, combined_questions_with_options):
-            question_index += 1
-            continue
+        # Log current question and condition
+        print(f"Checking question {q_index} with condition '{condition}'")
+
+        if condition:
+            condition_met = is_condition_met(condition, previous_answer, combined_questions_with_options)
+            # Log the result of the condition check
+            print(f"Condition '{condition}' met: {condition_met}")
+            if not condition_met:
+                question_index += 1
+                # Log the increment of question_index if condition not met
+                print(f"Condition not met, skipping to question_index={question_index}")
+                continue
+
+        # Log the question being returned
+        print(f"Condition met or no condition for question {q_index}, proceeding to return this question.")
         break
 
     if question_index > len(combined_questions_with_options):
         raise HTTPException(status_code=400, detail="No suitable question found")
 
     # Assuming previous context logic remains the same
-    previous_context = ""
-    if previous_question and previous_answer:
-        previous_context = f"Vraag: {previous_question}\nAntwoord: {previous_answer}"
+    previous_context = f"Vraag: {previous_question}\nAntwoord: {previous_answer}" if previous_question and previous_answer else ""
 
     # Assuming deployment logic remains the same
     deployment = client.deployments.invoke(
         key="logopedica-vragenlijsten",
-        context={
-            "environments": [],
-            "klacht": ["mondgewoonten"]
-        },
-        inputs={
-            "question": question,
-            "previous": previous_context
-        }
+        context={"environments": [], "klacht": ["mondgewoonten"]},
+        inputs={"question": question, "previous": previous_context}
     )
     rephrased_question = deployment.choices[0].message.content
+
+    # Log the question being sent to the frontend
+    print(f"Sending to frontend: rephrased_question='{rephrased_question}', quick_reply_options={quick_reply_options}")
 
     return {"rephrased_question": rephrased_question, "quick_reply_options": quick_reply_options}
 
