@@ -30,15 +30,15 @@ client = init_orquesta_client()
 
 initial_questions_with_options = [
     # Question 1: Conditional based on answer to question in the static front-end
-    ("1", "Wat is uw relatie tot die ander?", ["ouder/verzorger", "echtgeno(o)t(e)/partner", "(schoon)zoon/(schoon)dochter", "mantelzorger/verzorger/familielid"], "1=ander"),
+    ("2", "Wat is uw relatie tot die ander?", ["ouder/verzorger", "echtgeno(o)t(e)/partner", "(schoon)zoon/(schoon)dochter", "mantelzorger/verzorger/familielid"], "1=ander"),
     # Question 2
-    ("2", "Heeft u voldoende tijd (maximaal 10 minuten) om een aantal vragen over uw klacht te beantwoorden?", ["ja", "nee"], None),
+    ("3", "Heeft u voldoende tijd (maximaal 10 minuten) om een aantal vragen over uw klacht te beantwoorden?", ["ja", "nee"], None),
     # Question 3
-    ("3", "Op welk van de volgende gebieden heeft uw klacht betrekking? (er zijn meerdere antwoorden mogelijk)", ["stem", "keel", "spraak", "niet vloeiend spreken", "taal", "slikken", "adem", "gehoor", "mondgewoonten", "neurologisch probleem", "oncologisch probleem", "psychisch/psychiatrisch probleem", "leer-/ontwikkelingsprobleem", "anders"], None),
+    ("4", "Op welk van de volgende gebieden heeft uw klacht betrekking? (er zijn meerdere antwoorden mogelijk)", ["stem", "keel", "spraak", "niet vloeiend spreken", "taal", "slikken", "adem", "gehoor", "mondgewoonten", "neurologisch probleem", "oncologisch probleem", "psychisch/psychiatrisch probleem", "leer-/ontwikkelingsprobleem", "anders"], None),
     # Question 4: Conditional based on answers to question 4
-    ("4", "Is er door uw huisarts of specialist een diagnose gesteld?", ["ja", "nee"], "4=neurologisch probleem,oncologisch probleem,psychisch/psychiatrisch probleem,leer-/ontwikkelingsprobleem,anders"),
+    ("5", "Is er door uw huisarts of specialist een diagnose gesteld?", ["ja", "nee"], "4=neurologisch probleem,oncologisch probleem,psychisch/psychiatrisch probleem,leer-/ontwikkelingsprobleem,anders"),
     # Question 5: Conditional based on answer to question 5 being "ja"
-    ("5", "Hoe luidde die diagnose?", [], "5=ja")
+    ("6", "Hoe luidde die diagnose?", [], "5=ja")
 ]
 
 # Function to load initial questions
