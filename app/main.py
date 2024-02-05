@@ -29,9 +29,7 @@ def init_orquesta_client():
 client = init_orquesta_client()
 
 initial_questions_with_options = [
-    # Question 1
-    ("1", "Fijn dat u zich heeft aangemeld bij Logopédica. Heeft de aanmelding betrekking op uzelf of op iemand anders, bijvoorbeeld uw kind of een van uw ouders?", ["zelf", "ander"], None),
-    # Question 2: Conditional based on answer to question 1
+    # Question 2: Conditional based on answer to question 1(pre-loaded)
     ("2", "Wat is uw relatie tot die ander?", ["ouder/verzorger", "echtgeno(o)t(e)/partner", "(schoon)zoon/(schoon)dochter", "mantelzorger/verzorger/familielid"], "1=ander"),
     # Question 3
     ("3", "Heeft u voldoende tijd (maximaal 10 minuten) om een aantal vragen over uw klacht te beantwoorden?", ["ja", "nee"], None),
